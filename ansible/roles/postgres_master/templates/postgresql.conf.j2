@@ -1,0 +1,14 @@
+listen_addresses = '*'
+port = 5432
+
+max_wal_size = 1GB
+min_wal_size = 80MB
+
+wal_level = replica
+archive_mode = on
+archive_command = 'true'
+
+max_wal_senders = 10
+wal_keep_size = 512MB
+
+hot_standby = on

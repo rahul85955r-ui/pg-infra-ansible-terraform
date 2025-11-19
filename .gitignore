@@ -1,0 +1,20 @@
+# Terraform
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+*.tfvars.backup
+
+# SSH Keys
+*.pem
+*.key
+
+# Jenkins temp key folder
+tmp/
+
+# Ansible cache
+*.retry
+__pycache__/
+
+# Misc
+*.log
+ .terraform.lock.hcl

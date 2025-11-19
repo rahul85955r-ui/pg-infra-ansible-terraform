@@ -1,0 +1,60 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_DEFAULT_REGION = "ap-northeast-1"
+        SSH_KEY = credentials('postgres-key')
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps { checkout scm }
+        }
+
+        stage('Generate Public Key') {
+            steps {
+                sh '''
+                    mkdir -p tmp
+                    rm -f tmp/public_ssh_key.pub
+                    ssh-keygen -y -f "$SSH_KEY" > tmp/public_ssh_key.pub
+                    echo "Public key generated:"
+                    cat tmp/public_ssh_key.pub
+                '''
+            }
+        }
+
+        stage('Terraform Init/Apply') {
+            steps {
+                sh '''
+                    terraform init
+                    terraform fmt -recursive
+                    terraform validate
+                    terraform apply -auto-approve
+                '''
+            }
+        }
+
+        stage('Install Ansible Dependencies') {
+            steps {
+                sh '''
+                    pip3 install boto3 botocore
+                    ansible-galaxy collection install amazon.aws
+                '''
+            }
+        }
+
+        stage('Run Ansible') {
+            steps {
+                sh '''
+                    ANSIBLE_HOST_KEY_CHECKING=False \
+                    ansible-playbook \
+                        -i ansible/inventory_aws_ec2.yml \
+                        ansible/playbook.yml \
+                        --private-key "$SSH_KEY" \
+                        -u ubuntu
+                '''
+            }
+        }
+    }
+}
