@@ -104,7 +104,7 @@ pipeline {
                         echo ">>> Inventory Graph:"
                         ansible-inventory -i ansible/inventory_aws_ec2.yml --graph
 
-                        ansible-playbook -i ansible/inventory_aws_ec2.yml ansible/playbook.yml --check -vv
+                        ansible-playbook -i ansible/inventory_aws_ec2.yml ansible/playbook.yml 
                     '''
                 }
             }
