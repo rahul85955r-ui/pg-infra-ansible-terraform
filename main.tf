@@ -65,9 +65,9 @@ module "bastion" {
       from_port       = 22
       to_port         = 22
       protocol        = "tcp"
-      cidr_blocks     = [var.admin_cidr]
+      cidr_blocks     = ["0.0.0.0/0"]
       security_groups = []
-      description     = "SSH from Admin"
+      description     = "SSH from anywhere"
     }
   ]
 
