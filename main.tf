@@ -153,23 +153,4 @@ module "pg_replica" {
 }
 
 
-##############################
-# OUTPUTS
-##############################
-output "bastion_public_ip" {
-  value = module.bastion.public_ip
-}
 
-output "db_private_ips" {
-  value = [
-    module.pg_master.private_ip,
-    module.pg_replica.private_ip
-  ]
-}
-
-output "db_instance_ids" {
-  value = [
-    module.pg_master.instance_id,
-    module.pg_replica.instance_id
-  ]
-}
