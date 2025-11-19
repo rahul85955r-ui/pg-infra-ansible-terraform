@@ -2,14 +2,19 @@ plugin: amazon.aws.aws_ec2
 regions:
   - ap-northeast-1
 
-keyed_groups:
-  - key: tags.Role
-    prefix: role_
-
 filters:
-  tag:Project: "pg"
-  instance-state-name: "running"
+  tag:Project: pg
+  instance-state-name: running
 
 hostnames:
   - private-ip-address
-  - ip-address
+
+keyed_groups:
+  - key: tags.Role
+    prefix: "role_"
+    separator: ""
+
+strict: False
+
+compose:
+  ansible_ssh_host: private-ip-address
