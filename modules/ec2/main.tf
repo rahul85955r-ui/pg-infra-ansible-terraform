@@ -42,16 +42,19 @@ resource "aws_instance" "this" {
     volume_type = var.root_volume_type
   }
 
+  lifecycle {
+    ignore_changes = [
+      root_block_device,
+      user_data,
+    ]
+  }
+
   tags = merge({
     Name = var.name_tag
     Role = var.role
     Env  = var.env
   }, var.tags)
-
-  lifecycle {
-    ignore_changes = [
-      user_data,
-      # You may want to add other fields to ignore (tags, etc.) depending on your policy
-    ]
-  }
 }
+
+
+

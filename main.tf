@@ -1,17 +1,26 @@
+############################################
+# LOCAL TAGS
+############################################
 locals {
-  common_tags = merge({
+  common_tags = {
     Project   = var.project
     Env       = var.env
     ManagedBy = "terraform"
-  }, var.tags)
+  }
 }
 
+############################################
+# SSH KEYPAIR (PUBLIC KEY FROM JENKINS)
+############################################
 resource "aws_key_pair" "main" {
   key_name   = var.key_name
   public_key = file("${path.root}/${var.public_key_path}")
   tags       = local.common_tags
 }
 
+############################################
+# VPC MODULE
+############################################
 module "vpc" {
   source = "./modules/vpc"
 
@@ -28,35 +37,46 @@ module "vpc" {
   tags = local.common_tags
 }
 
+############################################
+# BASTION HOST
+############################################
 module "bastion" {
-  source   = "./modules/ec2"
+  source = "./modules/ec2"
+
   prefix   = var.project
   name_tag = "${var.project}-${var.env}-bastion"
   role     = "bastion"
   env      = var.env
 
-  ami                 = var.ami
-  instance_type       = var.bastion_instance_type
-  subnet_id           = module.vpc.public_subnet_id
-  vpc_id              = module.vpc.vpc_id
-  key_name            = aws_key_pair.main.key_name
-  sg_name             = "bastion-sg"
+  ami           = var.ami
+  instance_type = var.bastion_instance_type
+  subnet_id     = module.vpc.public_subnet_id
+  vpc_id        = module.vpc.vpc_id
+  key_name      = aws_key_pair.main.key_name
+  sg_name       = "bastion-sg"
+
   associate_public_ip = true
+
+  root_volume_size = 20
+  root_volume_type = "gp3"
 
   ingress_rules = [
     {
       from_port       = 22
       to_port         = 22
       protocol        = "tcp"
-      cidr_blocks     = [var.admin_cidr]
+      cidr_blocks     = ["0.0.0.0/0"]
       security_groups = []
-      description     = "SSH from admin"
+      description     = "SSH from anywhere"
     }
   ]
 
   tags = local.common_tags
 }
 
+############################################
+# DATABASE INSTANCES (MASTER + REPLICA)
+############################################
 module "db" {
   source = "./modules/ec2"
   count  = 2
@@ -71,10 +91,13 @@ module "db" {
 
   subnet_id = count.index == 0 ? module.vpc.private_master_subnet_id : module.vpc.private_replica_subnet_id
 
-  vpc_id   = module.vpc.vpc_id
-  key_name = aws_key_pair.main.key_name
+  vpc_id        = module.vpc.vpc_id
+  key_name      = aws_key_pair.main.key_name
+  sg_name       = "db-${count.index == 0 ? "master" : "replica"}-sg"
+  associate_public_ip = false
 
-  sg_name = "db-${count.index == 0 ? "master" : "replica"}-sg"
+  root_volume_size = 30
+  root_volume_type = "gp3"
 
   ingress_rules = [
     {
@@ -83,7 +106,7 @@ module "db" {
       protocol        = "tcp"
       cidr_blocks     = []
       security_groups = [module.bastion.security_group_id]
-      description     = "SSH from bastion"
+      description     = "SSH from Bastion"
     },
     {
       from_port       = 5432
@@ -91,7 +114,7 @@ module "db" {
       protocol        = "tcp"
       cidr_blocks     = [var.vpc_cidr]
       security_groups = []
-      description     = "PostgreSQL"
+      description     = "PostgreSQL internal"
     }
   ]
 

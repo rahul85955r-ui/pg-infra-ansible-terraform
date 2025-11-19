@@ -3,10 +3,11 @@ env     = "prod"
 region  = "ap-northeast-1"
 
 key_name        = "postgres-key"
-public_key_path = "tmp/public_ssh_key.pub"
+public_key_path = "keys/postgres-key.pub"
 admin_cidr      = "223.190.82.187/32"
 
-ami = "ami-0aec5ae807cea9ce0"
+ami = "ami-0df99b3a8349462c6"
+
 
 bastion_instance_type = "t3.micro"
 db_instance_type      = "t3.small"
