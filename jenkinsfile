@@ -97,9 +97,9 @@ pipeline {
                         export ANSIBLE_PRIVATE_KEY_FILE=$PWD/keys/postgres-key
                         export ANSIBLE_USER=ubuntu
 
-                        BASTION_IP=$(terraform output -raw bastion_public_ip)
+                        BASTION=$(terraform output -raw bastion_public_ip)
 
-                        export ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand=\\"ssh -i $PWD/keys/postgres-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p ubuntu@$BASTION_IP\\""
+                        export ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand='ssh -i $PWD/keys/postgres-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p ubuntu@${BASTION}'"
 
                         echo ">>> Inventory Graph:"
                         ansible-inventory -i ansible/inventory_aws_ec2.yml --graph
@@ -127,9 +127,9 @@ pipeline {
                         export ANSIBLE_PRIVATE_KEY_FILE=$PWD/keys/postgres-key
                         export ANSIBLE_USER=ubuntu
 
-                        BASTION_IP=$(terraform output -raw bastion_public_ip)
+                        BASTION=$(terraform output -raw bastion_public_ip)
 
-                        export ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand=\\"ssh -i $PWD/keys/postgres-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p ubuntu@$BASTION_IP\\""
+                        export ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand='ssh -i $PWD/keys/postgres-key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p ubuntu@${BASTION}'"
 
                         ansible-playbook -i ansible/inventory_aws_ec2.yml ansible/playbook.yml -vv
                     '''
