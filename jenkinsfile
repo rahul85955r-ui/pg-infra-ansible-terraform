@@ -1,152 +1,154 @@
 pipeline {
-    agent any
+  agent any
 
-    parameters {
-        choice(
-            name: 'ACTION',
-            choices: ['apply', 'destroy'],
-            description: 'Choose Terraform action'
-        )
+  parameters {
+    choice(name: 'ACTION', choices: ['apply','destroy'], description: 'Choose Terraform action')
+  }
+
+  environment {
+    AWS_DEFAULT_REGION = "ap-northeast-1"
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
     }
 
-    environment {
-        AWS_DEFAULT_REGION = "ap-northeast-1"
+    stage('Setup Python Virtualenv & Install') {
+      steps {
+        sh '''
+          python3 -m venv .venv
+          . .venv/bin/activate
+          pip install --upgrade pip
+          pip install ansible boto3 botocore ansible-lint
+          ansible-galaxy collection install amazon.aws || true
+        '''
+      }
     }
 
-    stages {
-
-        stage('Checkout') {
-            steps { checkout scm }
+    stage('Generate SSH Key') {
+      when { expression { params.ACTION == "apply" } }
+      steps {
+        withCredentials([sshUserPrivateKey(credentialsId: 'postgres-key', keyFileVariable: 'SSH_KEY')]) {
+          sh '''
+            mkdir -p keys
+            cp "$SSH_KEY" keys/postgres-key
+            chmod 600 keys/postgres-key
+            ssh-keygen -y -f keys/postgres-key > keys/postgres-key.pub
+            chmod 644 keys/postgres-key.pub
+            echo "Public key (first line):"
+            head -n 1 keys/postgres-key.pub
+          '''
         }
-
-        stage('Setup Python & Ansible') {
-            steps {
-                sh '''
-                    python3 -m venv .venv
-                    . .venv/bin/activate
-                    pip install --upgrade pip
-                    pip install ansible boto3 botocore ansible-lint
-                    ansible-galaxy collection install amazon.aws || true
-                '''
-            }
-        }
-
-        stage('Generate SSH Keys') {
-            when { expression { params.ACTION == "apply" } }
-            steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'postgres-key', keyFileVariable: 'SSH_KEY')]) {
-                    sh '''
-                        mkdir -p keys
-                        echo ">>> Generating public key"
-                        ssh-keygen -y -f "$SSH_KEY" > keys/postgres-key.pub
-                        cp "$SSH_KEY" keys/postgres-key
-                        chmod 600 keys/postgres-key
-                        chmod 644 keys/postgres-key.pub
-                        echo ">>> Public key preview:"
-                        head -n 1 keys/postgres-key.pub
-                    '''
-                }
-            }
-        }
-
-        stage('Terraform Init') {
-            steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
-                    sh '''
-                        terraform init -upgrade
-                        terraform fmt -recursive
-                        terraform validate
-                    '''
-                }
-            }
-        }
-
-        stage('Terraform Apply/Destroy') {
-            steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
-                    script {
-                        if (params.ACTION == "apply") {
-                            sh '''
-                                terraform plan -out=tfplan
-                                terraform apply -auto-approve tfplan
-                            '''
-                        } else {
-                            sh '''
-                                terraform destroy -auto-approve
-                            '''
-                        }
-                    }
-                }
-            }
-        }
-
-        stage("Ansible Dry Run") {
-            when { expression { params.ACTION == "apply" } }
-            steps {
-                withCredentials([
-                    [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds'],
-                    sshUserPrivateKey(credentialsId: 'postgres-key', keyFileVariable: 'SSH_KEY')
-                ]) {
-                    sh '''
-                        . .venv/bin/activate
-
-                        export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-                        export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-                        export AWS_DEFAULT_REGION=ap-northeast-1
-
-                        export ANSIBLE_PRIVATE_KEY_FILE=$PWD/keys/postgres-key
-                        export ANSIBLE_USER=ubuntu
-
-                        BASTION=$(terraform output -raw bastion_public_ip)
-
-                        export ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no \
-                        -o UserKnownHostsFile=/dev/null \
-                        -o ProxyCommand=\"ssh -i $PWD/keys/postgres-key \
-                        -o StrictHostKeyChecking=no \
-                        -o UserKnownHostsFile=/dev/null \
-                        -W [%h]:22 ubuntu@${BASTION}\""
-
-
-                        echo ">>> Inventory Graph:"
-                        ansible-inventory -i ansible/inventory_aws_ec2.yml --graph
-
-                        ansible-playbook -i ansible/inventory_aws_ec2.yml ansible/playbook.yml --check -vv
-                    '''
-                }
-            }
-        }
-
-        stage("Run Ansible (Full)") {
-            when { expression { params.ACTION == "apply" } }
-            steps {
-                withCredentials([
-                    [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds'],
-                    sshUserPrivateKey(credentialsId: 'postgres-key', keyFileVariable: 'SSH_KEY')
-                ]) {
-                    sh '''
-                        . .venv/bin/activate
-
-                        export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-                        export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-                        export AWS_DEFAULT_REGION=ap-northeast-1
-
-                        export ANSIBLE_PRIVATE_KEY_FILE=$PWD/keys/postgres-key
-                        export ANSIBLE_USER=ubuntu
-
-                        BASTION=$(terraform output -raw bastion_public_ip)
-
-                      export ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no \
-                      -o UserKnownHostsFile=/dev/null \
-                      -o ProxyCommand=\"ssh -i $PWD/keys/postgres-key \
-                      -o StrictHostKeyChecking=no \
-                      -o UserKnownHostsFile=/dev/null \
-                      -W [%h]:22 ubuntu@${BASTION}\""
-
-
-                        ansible-playbook -i ansible/inventory_aws_ec2.yml ansible/playbook.yml -vv
-                    '''
-                }
-            }
-        }
+      }
     }
+
+    stage('Terraform Init & Validate') {
+      steps {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+          sh '''
+            terraform init -upgrade
+            terraform fmt -recursive
+            terraform validate
+          '''
+        }
+      }
+    }
+
+    stage('Terraform Apply/Destroy') {
+      steps {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+          script {
+            if (params.ACTION == 'apply') {
+              sh '''
+                terraform plan -out=tfplan
+                terraform apply -auto-approve tfplan
+              '''
+            } else {
+              sh '''
+                terraform plan -destroy -out=tfplan_destroy || true
+                terraform destroy -auto-approve
+              '''
+            }
+          }
+        }
+      }
+    }
+
+    stage('Ansible Inventory Graph & Dry Run') {
+      when { expression { params.ACTION == 'apply' } }
+      steps {
+        withCredentials([
+          [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds'],
+          sshUserPrivateKey(credentialsId: 'postgres-key', keyFileVariable: 'SSH_KEY')
+        ]) {
+          sh '''
+            . .venv/bin/activate
+
+            export ANSIBLE_PRIVATE_KEY_FILE=$PWD/keys/postgres-key
+            export ANSIBLE_USER=ubuntu
+            export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+            export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+            export AWS_DEFAULT_REGION=ap-northeast-1
+
+            BASTION_IP=$(terraform output -raw bastion_public_ip 2>/dev/null || true)
+            if [ -n "$BASTION_IP" ]; then
+              export ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand=\"ssh -i $ANSIBLE_PRIVATE_KEY_FILE -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p ubuntu@$BASTION_IP\""
+            else
+              export ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+            fi
+
+            echo ">>> Inventory graph below:"
+            ansible-inventory -i ansible/inventory_aws_ec2.yml --graph
+
+            ansible-playbook -i ansible/inventory_aws_ec2.yml ansible/playbook.yml --check -vv
+          '''
+        }
+      }
+    }
+
+    stage('Run Ansible') {
+      when { expression { params.ACTION == 'apply' } }
+      steps {
+        withCredentials([
+          [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds'],
+          sshUserPrivateKey(credentialsId: 'postgres-key', keyFileVariable: 'SSH_KEY')
+        ]) {
+          sh '''
+            . .venv/bin/activate
+
+            export ANSIBLE_PRIVATE_KEY_FILE=$PWD/keys/postgres-key
+            export ANSIBLE_USER=ubuntu
+            export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+            export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+            export AWS_DEFAULT_REGION=ap-northeast-1
+
+            BASTION_IP=$(terraform output -raw bastion_public_ip 2>/dev/null || true)
+            if [ -n "$BASTION_IP" ]; then
+              export ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand=\"ssh -i $ANSIBLE_PRIVATE_KEY_FILE -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p ubuntu@$BASTION_IP\""
+            else
+              export ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+            fi
+
+            ansible-playbook -i ansible/inventory_aws_ec2.yml ansible/playbook.yml -vv
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      archiveArtifacts artifacts: 'keys/**', allowEmptyArchive: true
+      cleanWs()
+    }
+    success {
+      echo "Pipeline succeeded."
+    }
+    failure {
+      echo "Pipeline failed. Check logs for details."
+    }
+  }
 }
