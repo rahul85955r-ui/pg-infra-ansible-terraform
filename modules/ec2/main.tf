@@ -55,3 +55,9 @@ resource "aws_instance" "this" {
     ]
   }
 }
+
+lifecycle {
+  ignore_changes = [
+    root_block_device,
+  ]
+}
