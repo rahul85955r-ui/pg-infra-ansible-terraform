@@ -1,12 +1,28 @@
 ---
-- name: Install PostgreSQL
+# STEP 1: Add PGDG key
+- name: Add PostgreSQL APT key
+  apt_key:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    state: present
+
+# STEP 2: Add PGDG repo for PG15
+- name: Add PostgreSQL repository
+  apt_repository:
+    repo: "deb http://apt.postgresql.org/pub/repos/apt {{ postgresql_repo_version }} main"
+    state: present
+    filename: "pgdg"
+
+# STEP 3: Install PostgreSQL 15 (auto creates cluster)
+- name: Install PostgreSQL {{ postgresql_version }}
   apt:
     name:
-      - postgresql
-      - postgresql-contrib
+      - "postgresql-{{ postgresql_version }}"
+      - "postgresql-client-{{ postgresql_version }}"
+      - "postgresql-contrib-{{ postgresql_version }}"
     state: present
     update_cache: yes
 
+# STEP 4: Replace configs (cluster is already created here)
 - name: Replace postgresql.conf
   template:
     src: postgresql.conf.j2
