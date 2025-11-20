@@ -2,5 +2,6 @@ replication_user: "replicator"
 replication_password: "replicator123"
 
 # Auto-detect master from dynamic inventory group
-master_ip: "{{ hostvars[groups['role_master'][0]].ansible_host }}"
+master_ip: "{{ hostvars[groups['role_master'][0]].private_ip_address }}"
+
 
