@@ -1,0 +1,36 @@
+- name: Stop PostgreSQL before replication
+  service:
+    name: "{{ postgresql_service }}"
+    state: stopped
+
+- name: Remove old data directory
+  file:
+    path: "{{ postgresql_data_dir }}"
+    state: absent
+
+- name: Run base backup from master
+  become_user: postgres
+  command: >
+    pg_basebackup -h {{ master_ip }}
+    -D {{ postgresql_data_dir }}
+    -U {{ replication_user }}
+    -Fp -Xs -P
+
+- name: Create standby.signal
+  file:
+    path: "{{ postgresql_data_dir }}/standby.signal"
+    state: touch
+    owner: postgres
+    group: postgres
+
+- name: Apply replica postgresql.conf
+  template:
+    src: postgresql.conf.j2
+    dest: "/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
+  notify: restart postgres
+
+- name: Apply replica pg_hba.conf
+  template:
+    src: pg_hba.conf.j2
+    dest: "/etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf"
+  notify: restart postgres

@@ -1,8 +1,0 @@
----
-- name: Install PostgreSQL (replica)
-  apt:
-    name:
-      - postgresql
-      - postgresql-contrib
-    state: present
-    update_cache: yes

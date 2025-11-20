@@ -1,0 +1,7 @@
+listen_addresses = '*'
+
+# master = logical / replica = replica
+wal_level = {{ 'replica' if 'Role_replica' in group_names else 'logical' }}
+
+max_wal_senders = 10
+hot_standby = on

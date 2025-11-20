@@ -1,5 +1,0 @@
-listen_addresses = '*'
-port = 5432
-
-hot_standby = on
-primary_conninfo = 'host={{ hostvars[groups["role_master"][0]].ansible_host }} port=5432 user=replicator password={{ replicator_password }}'

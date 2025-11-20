@@ -1,4 +1,3 @@
----
 - name: restart postgres
   service:
     name: "{{ postgresql_service }}"

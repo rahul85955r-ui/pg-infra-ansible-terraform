@@ -1,0 +1,5 @@
+replication_user: "replicator"
+replication_password: "replicator123"
+
+# auto-detect master via tag Role_master
+master_ip: "{{ hostvars[groups['Role_master'][0]].ansible_host }}"

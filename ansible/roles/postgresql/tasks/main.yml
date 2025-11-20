@@ -1,0 +1,10 @@
+# Install PostgreSQL on both
+- include_tasks: install.yml
+
+# Master config
+- include_tasks: master.yml
+  when: "'Role_master' in group_names"
+
+# Replica config
+- include_tasks: replica.yml
+  when: "'Role_replica' in group_names"
