@@ -1,1 +1,4 @@
-postgresql_version: 12
+postgresql_major: "15"
+postgresql_service: "postgresql@15-main"
+postgresql_data_dir: "/var/lib/postgresql/15/main"
+
