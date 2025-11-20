@@ -18,7 +18,10 @@ keyed_groups:
 strict: False
 
 compose:
+  ansible_user: "'ubuntu'"
   ansible_ssh_host: |
-    tags.Role == 'bastion' 
-    ? public_ip_address 
+    tags.Role == 'bastion'
+    ? public_ip_address
     : private_ip_address
+
+   
