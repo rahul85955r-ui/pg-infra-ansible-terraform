@@ -6,7 +6,7 @@ key_name        = "postgres-key"
 public_key_path = "keys/postgres-key.pub"
 admin_cidr      = "223.190.82.187/32"
 
-ami = "ami-0df99b3a8349462c6"
+ami = "ami-03873003744ddc492"
 
 
 bastion_instance_type = "t3.micro"
