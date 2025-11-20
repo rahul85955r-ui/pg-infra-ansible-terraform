@@ -1,24 +1,16 @@
 ---
-# ============ BASTION SETUP ============
-- name: Configure Bastion Host
-  hosts: role_bastion
-  remote_user: ubuntu
-  become: yes
-  roles:
-    - bastion
-
-# ============ MASTER SETUP ============
+# ================== MASTER SETUP ==================
 - name: Configure PostgreSQL Master
   hosts: role_master
   remote_user: ubuntu
   become: yes
   roles:
-    - postgres_master
+    - postgresql
 
-# ============ REPLICA SETUP ============
+# ================== REPLICA SETUP ==================
 - name: Configure PostgreSQL Replica
   hosts: role_replica
   remote_user: ubuntu
   become: yes
   roles:
-    - postgres_replica
+    - postgresql
