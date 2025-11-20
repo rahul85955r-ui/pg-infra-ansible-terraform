@@ -18,4 +18,7 @@ keyed_groups:
 strict: False
 
 compose:
-  ansible_ssh_host: private-ip-address
+  ansible_ssh_host: |
+    tags.Role == 'bastion' 
+    ? public_ip_address 
+    : private_ip_address
