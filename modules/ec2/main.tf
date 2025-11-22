@@ -35,24 +35,23 @@ resource "aws_instance" "this" {
   key_name                    = var.key_name
   associate_public_ip_address = var.associate_public_ip
   vpc_security_group_ids      = [aws_security_group.this.id]
-  user_data                   = var.user_data
 
-user_data = <<-EOF
+  # ONLY ONE user_data BLOCK ALLOWED
+  user_data = <<-EOF
 #!/bin/bash
 
 # Create .ssh folder
 mkdir -p /home/ubuntu/.ssh
 
-# Add the private key (from your repository’s local file)
+# Add the private key from local file
 cat << 'KEYEOF' > /home/ubuntu/.ssh/postgres-key
-${file("keys/postgres-key")}
+${file("${path.module}/../../keys/postgres-key")}
 KEYEOF
 
-# Set correct permissions
 chmod 600 /home/ubuntu/.ssh/postgres-key
 chown ubuntu:ubuntu /home/ubuntu/.ssh/postgres-key
-EOF
 
+EOF
 
   root_block_device {
     volume_size = var.root_volume_size
@@ -72,6 +71,3 @@ EOF
     Env  = var.env
   }, var.tags)
 }
-
-
-
