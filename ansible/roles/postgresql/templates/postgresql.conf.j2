@@ -1,7 +1,4 @@
 listen_addresses = '*'
-
-# master = logical / replica = replica
-wal_level = {{ 'replica' if 'Role_replica' in group_names else 'logical' }}
-
-max_wal_senders = 10
-hot_standby = on
+max_connections = 100
+shared_buffers = 256MB
+wal_level = minimal
