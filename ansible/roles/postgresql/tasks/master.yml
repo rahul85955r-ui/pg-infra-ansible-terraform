@@ -9,3 +9,14 @@
     src: pg_hba.conf.j2
     dest: "/etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf"
   notify: restart postgres
+
+- name: Ensure PostgreSQL is started
+  service:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: Create test database
+  become_user: postgres
+  postgresql_db:
+    name: appdb
