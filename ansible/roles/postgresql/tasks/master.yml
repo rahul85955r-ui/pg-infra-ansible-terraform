@@ -16,7 +16,4 @@
     state: started
     enabled: true
 
-- name: Create test database
-  become: true
-  become_user: postgres
-  command: createdb testdb
+
