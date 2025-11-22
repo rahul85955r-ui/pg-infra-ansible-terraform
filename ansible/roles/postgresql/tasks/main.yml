@@ -1,8 +1,23 @@
----
-- include_tasks: install.yml
+- name: Apply master postgresql.conf
+  template:
+    src: postgresql.conf.j2
+    dest: /etc/postgresql/15/main/postgresql.conf
+  notify: restart postgres
 
-- include_tasks: master.yml
-  when: "'role_master' in group_names"
+- name: Apply master pg_hba.conf
+  template:
+    src: pg_hba.conf.j2
+    dest: /etc/postgresql/15/main/pg_hba.conf
+  notify: restart postgres
 
-- include_tasks: replica.yml
-  when: "'role_replica' in group_names"
+- name: Ensure PostgreSQL is started
+  service:
+    name: postgresql
+    state: started
+    enabled: true
+
+# Optional: Create a test DB
+- name: Create test database
+  become_user: postgres
+  postgresql_db:
+    name: appdb
