@@ -36,22 +36,32 @@ resource "aws_instance" "this" {
   associate_public_ip_address = var.associate_public_ip
   vpc_security_group_ids      = [aws_security_group.this.id]
 
-  # ONLY ONE user_data BLOCK ALLOWED
-  user_data = <<-EOF
+user_data = <<-EOF
 #!/bin/bash
 
-# Create .ssh folder
+# Create SSH folder
 mkdir -p /home/ubuntu/.ssh
+chmod 700 /home/ubuntu/.ssh
+chown ubuntu:ubuntu /home/ubuntu/.ssh
 
-# Add the private key from local file
+# Write the private key onto the instance
 cat << 'KEYEOF' > /home/ubuntu/.ssh/postgres-key
-${file("${path.module}/../../keys/postgres-key")}
+${file("keys/postgres-key")}
 KEYEOF
 
+# Fix permissions
 chmod 600 /home/ubuntu/.ssh/postgres-key
 chown ubuntu:ubuntu /home/ubuntu/.ssh/postgres-key
 
+# Disable host key checking so bastion -> master SSH works
+echo "Host *
+    StrictHostKeyChecking no
+    UserKnownHostsFile=/dev/null" >> /home/ubuntu/.ssh/config
+chmod 600 /home/ubuntu/.ssh/config
+chown ubuntu:ubuntu /home/ubuntu/.ssh/config
+
 EOF
+
 
   root_block_device {
     volume_size = var.root_volume_size
