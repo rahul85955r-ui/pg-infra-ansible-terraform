@@ -1,4 +1,14 @@
+# PostgreSQL Main Config
+
+data_directory = '/var/lib/postgresql/{{ postgresql_version }}/main'
+hba_file = '/etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf'
+ident_file = '/etc/postgresql/{{ postgresql_version }}/main/pg_ident.conf'
+
 listen_addresses = '*'
+port = 5432
+
 max_connections = 100
-shared_buffers = 256MB
-wal_level = minimal
+shared_buffers = 128MB
+logging_collector = on
+log_directory = 'log'
+log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'
