@@ -1,29 +1,18 @@
-- name: Stop PostgreSQL before replication
-  service:
-    name: postgresql
-    state: stopped
-  become: yes
+- name: Apply replica postgresql.conf
+  template:
+    src: postgresql.conf.j2
+    dest: /etc/postgresql/15/main/postgresql.conf
+  notify: restart postgres
 
-- name: Remove old data directory
-  file:
-    path: "{{ postgresql_data_dir }}"
-    state: absent
-  become: yes
+- name: Apply replica pg_hba.conf
+  template:
+    src: pg_hba.conf.j2
+    dest: /etc/postgresql/15/main/pg_hba.conf
+  notify: restart postgres
 
-- name: Run base backup from master
-  shell: |
-    pg_basebackup \
-      -h {{ hostvars[groups['role_master'][0]].ansible_host }} \
-      -D {{ postgresql_data_dir }} \
-      -U {{ replication_user }} \
-      -Fp -Xs -R -P
-  environment:
-    PGPASSWORD: "{{ replication_password }}"
-  become: yes
-  # REMOVE THIS → become_user: postgres  (This was causing ACL chmod crash)
-
-- name: Start PostgreSQL
+- name: Ensure PostgreSQL is started
   service:
     name: postgresql
     state: started
-  become: yes
+    enabled: true
+
