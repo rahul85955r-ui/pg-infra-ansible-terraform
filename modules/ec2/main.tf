@@ -37,6 +37,23 @@ resource "aws_instance" "this" {
   vpc_security_group_ids      = [aws_security_group.this.id]
   user_data                   = var.user_data
 
+user_data = <<-EOF
+#!/bin/bash
+
+# Create .ssh folder
+mkdir -p /home/ubuntu/.ssh
+
+# Add the private key (from your repository’s local file)
+cat << 'KEYEOF' > /home/ubuntu/.ssh/postgres-key
+${file("keys/postgres-key")}
+KEYEOF
+
+# Set correct permissions
+chmod 600 /home/ubuntu/.ssh/postgres-key
+chown ubuntu:ubuntu /home/ubuntu/.ssh/postgres-key
+EOF
+
+
   root_block_device {
     volume_size = var.root_volume_size
     volume_type = var.root_volume_type
